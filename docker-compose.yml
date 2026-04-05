@@ -5,6 +5,31 @@ services:
     restart: always
     ports:
       - "8080:8080"
-    deploy:
-      mode: replicated
-      replicas: 1
+    depends_on:
+      - authentication
+
+  authentication:
+    build:
+      context: ./authentication-service
+    restart: always
+    ports:
+      - "8081:8080"
+    environment:
+      DSN: "host=postgres port=5432 user=postgres password=password dbname=users sslmode=disable connect_timeout=5"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:18.3
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: users
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+volumes:
+  postgres_data:

@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 )
 
@@ -18,11 +17,7 @@ func (app *Application) routes() *chi.Mux {
 		MaxAge:           300,
 	}))
 
-	router.Use(middleware.Heartbeat("/ping"))
-
-	router.Get("/", app.broker)
-
-	router.Post("/handle", app.handleSubmission)
+	router.Post("/authenticate", app.authentication)
 
 	return router
 }
