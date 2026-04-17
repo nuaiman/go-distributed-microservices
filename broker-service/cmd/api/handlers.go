@@ -11,6 +11,14 @@ type RequestPayload struct {
 	Action string      `json:"action"`
 	Auth   AuthPayload `json:"auth,omitempty"`
 	Log    LogPayload  `json:"log,omitempty"`
+	Mail   MailPayload `json:"mail,omitempty"`
+}
+
+type MailPayload struct {
+	From    string `json:"from"`
+	To      string `json:"to"`
+	Subject string `json:"subject"`
+	Message string `json:"message"`
 }
 
 type AuthPayload struct {
@@ -52,6 +60,9 @@ func (app *Application) handleSubmission(w http.ResponseWriter, r *http.Request)
 	case "log":
 		app.log(w, RequestPayload.Log)
 
+	case "mail":
+		app.mail(w, RequestPayload.Mail)
+
 	default:
 		app.errorJSON(w, errors.New("invalid action"))
 	}
@@ -65,6 +76,8 @@ func (app *Application) authenticate(w http.ResponseWriter, p AuthPayload) {
 		app.errorJSON(w, err)
 		return
 	}
+
+	request.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
 	response, err := client.Do(request)
@@ -116,6 +129,8 @@ func (app *Application) log(w http.ResponseWriter, p LogPayload) {
 		return
 	}
 
+	request.Header.Set("Content-Type", "application/json")
+
 	client := &http.Client{}
 	resposne, err := client.Do(request)
 	if err != nil {
@@ -138,4 +153,35 @@ func (app *Application) log(w http.ResponseWriter, p LogPayload) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (app *Application) mail(w http.ResponseWriter, p MailPayload) {
+	jsonData, _ := json.MarshalIndent(p, "", "\t")
+
+	request, err := http.NewRequest("POST", "http://mailer:8080/send", bytes.NewBuffer(jsonData))
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resposne, err := client.Do(request)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+	defer resposne.Body.Close()
+
+	if resposne.StatusCode != http.StatusAccepted {
+		app.errorJSON(w, errors.New("error calling mailer service"))
+		return
+	}
+
+	var payload JsonResponse
+	payload.Error = false
+	payload.Message = "Message sent to " + p.To
+
+	app.writeJSON(w, http.StatusAccepted, payload)
 }
