@@ -6,8 +6,8 @@ import (
 )
 
 type RequestPayload struct {
-	Name string `josn:"name"`
-	Data string `josn:"data"`
+	Name string `json:"name"`
+	Data string `json:"data"`
 }
 
 func (app *Application) WriteLog(w http.ResponseWriter, r *http.Request) {

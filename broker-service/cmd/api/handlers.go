@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/rpc"
 )
 
 type RequestPayload struct {
@@ -63,6 +64,9 @@ func (app *Application) handleSubmission(w http.ResponseWriter, r *http.Request)
 
 	case "log-mq":
 		app.logViaRabbitMQ(w, RequestPayload.Log)
+
+	case "log-rpc":
+		app.logViaRPC(w, RequestPayload.Log)
 
 	case "mail":
 		app.mail(w, RequestPayload.Mail)
@@ -222,4 +226,37 @@ func (app *Application) pushToAMQP(name, msg string) error {
 	}
 
 	return nil
+}
+
+type RPCPayload struct {
+	Name string
+	Data string
+}
+
+func (app *Application) logViaRPC(w http.ResponseWriter, p LogPayload) {
+
+	client, err := rpc.Dial("tcp", "logger:5001")
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	rpcPayload := RPCPayload{
+		Name: p.Name,
+		Data: p.Data,
+	}
+
+	var result string
+	err = client.Call("RPCServer.LogInfo", rpcPayload, &result)
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	payload := JsonResponse{
+		Error:   false,
+		Message: result,
+	}
+
+	app.writeJSON(w, http.StatusAccepted, payload)
 }
