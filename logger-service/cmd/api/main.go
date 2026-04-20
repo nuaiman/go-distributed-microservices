@@ -17,6 +17,7 @@ import (
 
 const webPort = "8080"
 const rpcPort = "5001"
+const gRPCPort = "50001"
 
 type Application struct {
 	DB     *mongo.Client
@@ -44,7 +45,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	go app.rpcListen()
+
+	go app.gRPCListen()
 
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%s", webPort),
